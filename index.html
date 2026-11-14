@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Infinity Bacaman - Potato Edition</title>
+<style>
+    body{
+        margin:0;
+        background:#111;
+        overflow:hidden;
+        font-family:Arial,sans-serif;
+        color:white;
+    }
+
+    #ui{
+        position:absolute;
+        top:10px;
+        left:10px;
+        z-index:10;
+        font-size:20px;
+    }
+
+    canvas{
+        display:block;
+        background:#181818;
+    }
+</style>
+</head>
+<body>
+
+<div id="ui">
+    Score: <span id="score">0</span>
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+}
+resize();
+addEventListener("resize", resize);
+
+const scoreEl = document.getElementById("score");
+
+const player = {
+    x: 300,
+    y: 300,
+    size: 28,
+    speed: 4
+};
+
+const keys = {};
+let score = 0;
+let pellets = [];
+let enemies = [];
+
+document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+function spawnPellet(){
+    pellets.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: 5
+    });
+}
+
+function spawnEnemy(){
+    enemies.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: 24,
+        speed: 1 + Math.random() * 1.5
+    });
+}
+
+for(let i=0;i<50;i++) spawnPellet();
+for(let i=0;i<5;i++) spawnEnemy();
+
+function drawPotato(x,y,size,color){
+    ctx.fillStyle = color;
+
+    ctx.beginPath();
+    ctx.ellipse(x,y,size*0.9,size,0,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = "#000";
+
+    ctx.beginPath();
+    ctx.arc(x-size/4,y-size/5,2,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(x+size/4,y-size/5,2,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(x,y+size/6,4,0,Math.PI);
+    ctx.strokeStyle="#000";
+    ctx.stroke();
+}
+
+function update(){
+
+    if(keys["w"] || keys["arrowup"]) player.y -= player.speed;
+    if(keys["s"] || keys["arrowdown"]) player.y += player.speed;
+    if(keys["a"] || keys["arrowleft"]) player.x -= player.speed;
+    if(keys["d"] || keys["arrowright"]) player.x += player.speed;
+
+    for(let i=pellets.length-1;i>=0;i--){
+        const p = pellets[i];
+
+        const dx = player.x - p.x;
+        const dy = player.y - p.y;
+
+        if(Math.hypot(dx,dy) < player.size){
+            pellets.splice(i,1);
+            score++;
+            scoreEl.textContent = score;
+
+            spawnPellet();
+
+            if(score % 10 === 0){
+                spawnEnemy();
+            }
+        }
+    }
+
+    enemies.forEach(enemy=>{
+
+        const dx = player.x - enemy.x;
+        const dy = player.y - enemy.y;
+        const dist = Math.hypot(dx,dy);
+
+        enemy.x += dx / dist * enemy.speed;
+        enemy.y += dy / dist * enemy.speed;
+
+        if(dist < player.size + enemy.size/2){
+            score = 0;
+            scoreEl.textContent = score;
+
+            player.x = canvas.width/2;
+            player.y = canvas.height/2;
+
+            enemies.length = 0;
+
+            for(let i=0;i<5;i++){
+                spawnEnemy();
+            }
+        }
+    });
+}
+
+function drawInfiniteGrid(){
+
+    const cell = 50;
+    const ox = player.x % cell;
+    const oy = player.y % cell;
+
+    ctx.strokeStyle = "#222";
+    ctx.lineWidth = 1;
+
+    for(let x=-ox; x<canvas.width; x+=cell){
+        ctx.beginPath();
+        ctx.moveTo(x,0);
+        ctx.lineTo(x,canvas.height);
+        ctx.stroke();
+    }
+
+    for(let y=-oy; y<canvas.height; y+=cell){
+        ctx.beginPath();
+        ctx.moveTo(0,y);
+        ctx.lineTo(canvas.width,y);
+        ctx.stroke();
+    }
+}
+
+function render(){
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    drawInfiniteGrid();
+
+    pellets.forEach(p=>{
+        ctx.fillStyle = "gold";
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fill();
+    });
+
+    enemies.forEach(enemy=>{
+        drawPotato(enemy.x, enemy.y, enemy.size, "#d66641");
+    });
+
+    drawPotato(player.x, player.y, player.size, "#b68b4c");
+}
+
+function loop(){
+    update();
+    render();
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
